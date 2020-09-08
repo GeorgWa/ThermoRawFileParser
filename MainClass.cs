@@ -411,7 +411,7 @@ namespace ThermoRawFileParser
                 },
                 {
                     "a|allDetectors",
-                    "Extract additonal detector data: UV/PDA etc",
+                    "Extract additional detector data: UV/PDA etc",
                     v => parseInput.AllDetectors = v != null
                 },
                 {
