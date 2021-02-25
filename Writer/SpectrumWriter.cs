@@ -182,8 +182,8 @@ namespace ThermoRawFileParser.Writer
             double precursorMass, double? isolationWidth, bool useProfile)
         {
             double precursorIntensity = 0;
-            double halfWidth = isolationWidth is null ? 0 : (double) isolationWidth / 2; //if isolationWidth was not defined set it to 0
-            
+            double halfWidth = isolationWidth is null || isolationWidth == 0 ? 0 : DefaultIsolationWindowLowerOffset; // that is how it is made in MSConvert (why?)
+
             // Get the precursor scan from the RAW file
             var scan = Scan.FromFile(rawFile, precursorScanNumber);
 
