@@ -217,7 +217,7 @@ namespace ThermoRawFileParser.Writer
 
             var index = masses.FastBinarySearch(precursorMass - halfWidth); //set index to the first peak inside isolation window
 
-            while (index < masses.Length && masses[index] < precursorMass + halfWidth)
+            while (index > 0 && index < masses.Length && masses[index] < precursorMass + halfWidth) //negative index means value was not found
             {
                 precursorIntensity += intensities[index];
                 index++;

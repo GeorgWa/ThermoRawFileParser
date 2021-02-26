@@ -1844,6 +1844,9 @@ namespace ThermoRawFileParser.Writer
                 //do nothing
             }
 
+            //if isolation width was not found earlier try to get it from reaction object
+            if (isolationWidth is null) isolationWidth = reaction.IsolationWidth;
+
             var precursor = new PrecursorType
             {
                 selectedIonList =
