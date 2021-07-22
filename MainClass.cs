@@ -394,7 +394,7 @@ namespace ThermoRawFileParser
                     v => outputFormatString = v
                 },
                 {
-                    "m=|metadata=", "The metadata output format: 0 for JSON, 1 for TXT.",
+                    "m=|metadata=", "The metadata output format: 0 for JSON, 1 for TXT, 2 for CSV.",
                     v => metadataFormatString = v
                 },
                 {
@@ -626,7 +626,7 @@ namespace ThermoRawFileParser
                     }
                     else
                     {
-                        throw new OptionException("unknown metadata format value (0 for JSON, 1 for TXT)",
+                        throw new OptionException("unknown metadata format value (0 for JSON, 1 for TXT, 2 for CSV)",
                             "-m, --metadata");
                     }
                 }
@@ -640,7 +640,7 @@ namespace ThermoRawFileParser
 
                 if (parseInput.MetadataOutputFile != null && parseInput.MetadataFormat == MetadataFormat.NONE)
                 {
-                    throw new OptionException("specify a metadata format (0 for JSON, 1 for TXT)",
+                    throw new OptionException("specify a metadata format (0 for JSON, 1 for TXT, 2 for CSV)",
                         "-m, --metadata");
                 }
 
@@ -810,7 +810,7 @@ namespace ThermoRawFileParser
                     if (!intervalMatch.Success)
                         throw new OptionException();
 
-                    if (intervalMatch.Groups[2].Success) //it is interval
+                    if (intervalMatch.Groups[2].Success) //it is an interval
                     {
                         if (intervalMatch.Groups[1].Success)
                             start = Math.Max(1, int.Parse(intervalMatch.Groups[1].Value));

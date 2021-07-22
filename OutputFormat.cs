@@ -13,6 +13,7 @@
     {
         JSON,
         TXT,
+        CSV,
         NONE
     }
 }

@@ -52,6 +52,7 @@ namespace ThermoRawFileParser.Writer
 
             for (var scanNumber = firstScanNumber; scanNumber <= lastScanNumber; scanNumber++)
             {
+                // QUESTION: Why don't use the startTime and endTime?
                 var time = rawFile.RetentionTimeFromScanNumber(scanNumber);
 
                 // Get the scan filter for this scan number
@@ -60,21 +61,21 @@ namespace ThermoRawFileParser.Writer
                 // Get the scan event for this scan number
                 var scanEvent = rawFile.GetScanEventForScanNumber(scanNumber);
 
-                // Only consider MS2 spectra
+                //count scans for each level
                 if (msTypes.ContainsKey(scanFilter.MSOrder.ToString()))
                 {
-                    var value = msTypes[scanFilter.MSOrder.ToString()];
-                    value = value + 1;
-                    msTypes[scanFilter.MSOrder.ToString()] = value;
+                    msTypes[scanFilter.MSOrder.ToString()]++;
                 }
                 else
-                    msTypes.Add(scanFilter.MSOrder.ToString(), 1);
+                    msTypes[scanFilter.MSOrder.ToString()] = 1;
 
+                // QUESTION: Why don't use the startTime and endTime?
                 if (time > maxTime)
                     maxTime = time;
                 if (time < minTime)
                     minTime = time;
 
+                // Only consider MS2 spectra
                 if (scanFilter.MSOrder == MSOrderType.Ms2)
                 {
                     fragmentationTypes.Add(ParseActivationType(scanFilter.GetActivation(0)));
