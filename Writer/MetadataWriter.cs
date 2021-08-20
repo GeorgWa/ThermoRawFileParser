@@ -4,12 +4,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Web.WebSockets;
+using System.Text.RegularExpressions;
 using log4net;
 using Newtonsoft.Json;
 using ThermoFisher.CommonCore.Data;
+using ThermoFisher.CommonCore.Data.Business;
 using ThermoFisher.CommonCore.Data.FilterEnums;
 using ThermoFisher.CommonCore.Data.Interfaces;
+using ThermoRawFileParser.Util;
 
 namespace ThermoRawFileParser.Writer
 {
@@ -17,6 +19,8 @@ namespace ThermoRawFileParser.Writer
     {
         private static readonly ILog Log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
+        private Regex infoHeader = new Regex(@"=+.+?=+");
 
         private readonly ParseInput _parseInput;
         private string _metadataFileName;
@@ -50,16 +54,51 @@ namespace ThermoRawFileParser.Writer
             var startTime = rawFile.RunHeaderEx.StartTime;
             var endTime = rawFile.RunHeaderEx.EndTime;
 
+            var table = new TableData();
+
             for (var scanNumber = firstScanNumber; scanNumber <= lastScanNumber; scanNumber++)
             {
                 // QUESTION: Why don't use the startTime and endTime?
                 var time = rawFile.RetentionTimeFromScanNumber(scanNumber);
-
                 // Get the scan filter for this scan number
                 var scanFilter = rawFile.GetFilterForScanNumber(scanNumber);
-
                 // Get the scan event for this scan number
                 var scanEvent = rawFile.GetScanEventForScanNumber(scanNumber);
+                //trailer information
+                var trailerData = new ScanTrailer(rawFile.GetTrailerExtraInformation(scanNumber));
+
+                if (_parseInput.MetadataFormat == MetadataFormat.CSV)
+                {
+                    //Status log
+                    var statusLog = rawFile.GetStatusLogForRetentionTime(time);
+                    //scan itself for peak counts
+                    var scan = Scan.FromFile(rawFile, scanNumber);
+
+                    //extended metadata
+                    var scanData = new Dictionary<string, string>();
+
+                    scanData["ScanNumber"] = scanNumber.ToString();
+                    scanData["PeakCount"] = scan.HasCentroidStream ? scan.CentroidScan.Length.ToString() : null;
+                    scanData["MSLevel"] = scanFilter.MSOrder.ToString();
+
+                    for (int i = 0; i < statusLog.Length; i++)
+                    {
+                        var dataLabel = statusLog.Labels[i].Trim(new char[] { ':', ' ' });
+
+                        if (!infoHeader.IsMatch(dataLabel))
+                            scanData[dataLabel] = statusLog.Values[i].Trim();
+                    }
+
+                    for (int i = 0; i < trailerData.Length; i++)
+                    {
+                        var dataLabel = trailerData.Labels[i].Trim(new char[] { ':', ' ' });
+
+                        if (!infoHeader.IsMatch(dataLabel))
+                            scanData[dataLabel] = trailerData.Values[i].Trim();
+                    }
+
+                    table.AddRow(scanData);
+                }
 
                 //count scans for each level
                 if (msTypes.ContainsKey(scanFilter.MSOrder.ToString()))
@@ -97,17 +136,11 @@ namespace ThermoRawFileParser.Writer
                         }
 
                         // trailer extra data list
-                        var trailerData = rawFile.GetTrailerExtraInformation(scanNumber);
-                        for (var i = 0; i < trailerData.Length; i++)
+                        var charge = trailerData.AsPositiveInt("Charge State:");
+                        if (charge.HasValue)
                         {
-                            if (trailerData.Labels[i] == "Charge State:")
-                            {
-                                if (int.Parse(trailerData.Values[i]) > maxCharge)
-                                    maxCharge = int.Parse(trailerData.Values[i]);
-
-                                if (int.Parse(trailerData.Values[i]) < minCharge)
-                                    minCharge = int.Parse(trailerData.Values[i]);
-                            }
+                            maxCharge = Math.Max(charge.Value, maxCharge);
+                            minCharge = Math.Min(charge.Value, minCharge);
                         }
                     }
                 }
@@ -133,6 +166,13 @@ namespace ThermoRawFileParser.Writer
                         : Path.Combine(_parseInput.OutputDirectory, _parseInput.RawFileNameWithoutExtension) +
                           "-metadata.txt";
                     WriteTextMetadata(rawFile, firstScanNumber, lastScanNumber);
+                    break;
+                case MetadataFormat.CSV:
+                    _metadataFileName = _parseInput.MetadataOutputFile != null
+                        ? _parseInput.MetadataOutputFile
+                        : Path.Combine(_parseInput.OutputDirectory, _parseInput.RawFileNameWithoutExtension) +
+                          "-metadata.csv";
+                    table.ToCSV(_metadataFileName);
                     break;
             }
         }
